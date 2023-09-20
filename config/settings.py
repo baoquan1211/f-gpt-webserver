@@ -130,7 +130,6 @@ DATABASES = {
         "PORT": os.getenv("DATABASE_PORT"),
         "OPTIONS": {
             "sslmode": "require",
-            "options": "endpoint=ep-replace-this-12345679",
         },
     }
 }
