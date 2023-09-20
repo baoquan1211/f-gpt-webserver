@@ -130,6 +130,7 @@ DATABASES = {
         "PORT": os.getenv("DATABASE_PORT"),
         "OPTIONS": {
             "sslmode": "require",
+            "options": "endpoint=ep-bitter-band-25656202-pooler",
         },
     }
 }
