@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "words_filter",
     "users",
     "ai_platforms",
+    "policies",
 ]
 
 MIDDLEWARE = [
@@ -131,7 +132,7 @@ DATABASES = {
         "PORT": os.getenv("DATABASE_PORT"),
         "OPTIONS": {
             "sslmode": "require",
-            "options": "endpoint=ep-bitter-band-25656202-pooler",
+            "options": "endpoint=ep-bitter-band-25656202",
         },
     }
 }
@@ -173,7 +174,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
-# STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

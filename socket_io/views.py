@@ -4,7 +4,6 @@ from conversations.models import Conversation
 from users.models import User
 import json
 from .message_filter import message_filter
-from asgiref.sync import sync_to_async
 from ai_platforms.views import OpenAI, PaLM
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
@@ -86,7 +85,6 @@ async def disconnect_request(sid):
 @sio.event
 async def connect(sid, environ):
     print(sid, ": connected")
-    # sio.emit("answer_request", sid)
 
 
 @sio.event
