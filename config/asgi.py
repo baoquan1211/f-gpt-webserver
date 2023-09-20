@@ -26,3 +26,4 @@ application = ProtocolTypeRouter(
         "websocket": socket_app,
     }
 )
+app = application
