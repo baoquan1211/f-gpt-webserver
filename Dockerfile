@@ -12,6 +12,6 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD [ "daphne" , "config.asgi:application "]
+CMD [ "daphne" , "config.asgi:application" , "-b 0.0.0.0"]
 
 EXPOSE 8000
