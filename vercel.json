@@ -26,5 +26,10 @@
       "src": "/(.*)",
       "dest": "config/asgi.py"
     }
-  ]
+  ],
+  "functions": {
+    "api/**/*.py": {
+      "excludeFiles": "public/**"
+    }
+  }
 }
