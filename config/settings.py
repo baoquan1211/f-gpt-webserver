@@ -31,7 +31,7 @@ SECRET_KEY = "django-insecure-o1(5&5-537eaf+x1aw-usrt&m%15(*qrjd&$%)gya!8^a2x69d
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", ".vercel.app", ".now.sh"]
+ALLOWED_HOSTS = ["127.0.0.1", ".vercel.app", ".now.sh", ".onrender.com", "railway.app"]
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
