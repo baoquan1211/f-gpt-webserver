@@ -13,9 +13,8 @@ import pandas as pd
 import io
 from unidecode import unidecode
 from django.db.models import Count
-
-from .models import User, Department, Role
-from .serializers import (
+from users.models import User, Department, Role
+from users.serializers import (
     UserSerializer,
     DepartmentSerializer,
     RoleSerializer,
