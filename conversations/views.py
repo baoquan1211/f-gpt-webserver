@@ -28,9 +28,7 @@ class ConversationView(viewsets.ViewSet):
             if conversations:
                 return response.Response(conversations, status=status.HTTP_200_OK)
             else:
-                return response.Response(
-                    "Conversation is not found", status=status.HTTP_404_NOT_FOUND
-                )
+                return response.Response([], status=status.HTTP_204_NO_CONTENT)
         except Exception as error:
             print(error)
             return response.Response(
