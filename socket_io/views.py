@@ -32,7 +32,6 @@ async def ask_request(sid, data):
             conversation = Conversation(
                 name=data["message"]["content"],
                 user_id=user,
-                provider_id=1,
                 messages=json.dumps(messages),
             )
             conversation.save()

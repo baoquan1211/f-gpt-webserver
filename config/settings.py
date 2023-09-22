@@ -26,12 +26,12 @@ load_dotenv()
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-o1(5&5-537eaf+x1aw-usrt&m%15(*qrjd&$%)gya!8^a2x69d"
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", ".vercel.app", ".now.sh", ".onrender.com", "railway.app"]
+ALLOWED_HOSTS = ["127.0.0.1", ".vercel.app", ".now.sh", ".onrender.com"]
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
@@ -83,7 +83,7 @@ AUTH_USER_MODEL = "users.User"
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "TOKEN_OBTAIN_SERIALIZER": "users.serializers.CustomObtainPairSerializer",
 }
@@ -110,12 +110,11 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173", os.getenv("WEBAPP_URL")]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://f-gpt-webserver.onrender.com",
+    os.getenv("WEBAPP_URL"),
 ]
 
 
@@ -179,3 +178,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# WARNING SETTING:
+APPEND_SLASH = False

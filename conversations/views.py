@@ -3,7 +3,10 @@ from rest_framework import response, status, viewsets
 from .models import Conversation
 from .serializers import ConversationSerializer
 from django.forms.models import model_to_dict
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
+from conversations.pdf import PDF
+import json
+from django.http import HttpResponse
 
 
 class ConversationView(viewsets.ViewSet):
@@ -21,14 +24,15 @@ class ConversationView(viewsets.ViewSet):
             )
 
             conversations = conversation_serializer.data
-
+            print(conversations)
             if conversations:
                 return response.Response(conversations, status=status.HTTP_200_OK)
             else:
                 return response.Response(
                     "Conversation is not found", status=status.HTTP_404_NOT_FOUND
                 )
-        except:
+        except Exception as error:
+            print(error)
             return response.Response(
                 "Something went wrong", status=status.HTTP_404_NOT_FOUND
             )
@@ -99,4 +103,26 @@ class ConversationView(viewsets.ViewSet):
             return response.Response(
                 str(error),
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def export_pdf(self, request, id):
+        try:
+            conversation = Conversation.objects.get(
+                id=id, deleted_at=None, user_id=request._user.id
+            )
+
+            pdf = PDF()
+            pdf_bytes_string = pdf.export(
+                conversation=json.loads(conversation.messages),
+                username=request._user.name,
+            )
+
+            return HttpResponse(
+                bytes(pdf_bytes_string),
+                content_type="application/pdf",
+            )
+        except Exception as error:
+            return response.Response(
+                str(error),
+                status=status.HTTP_404_NOT_FOUND,
             )

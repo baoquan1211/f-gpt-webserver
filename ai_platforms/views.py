@@ -36,6 +36,8 @@ class OpenAI(BaseAIPlatform):
         )
         response = list(response.choices)[0]
         response = response.to_dict()["message"]["content"]
+        if response == None:
+            response = "Sorry, I can't understand your request."
         return {"role": "openai", "content": response}
 
 
@@ -54,7 +56,7 @@ class PaLM(BaseAIPlatform):
             messages=prompt,
             temperature=0.2,
         )
-        if response == None:
+        if response.last == None:
             response = "Sorry, I can't understand your request."
         else:
             response = response.last
