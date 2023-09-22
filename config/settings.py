@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", ".vercel.app", ".now.sh", ".onrender.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".vercel.app", ".now.sh", ".onrender.com"]
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
@@ -114,6 +114,7 @@ CORS_ALLOWED_ORIGINS = ["http://localhost:5173", os.getenv("WEBAPP_URL")]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://f-gpt-webserver.onrender.com",
+    "http://localhost:5173",
     os.getenv("WEBAPP_URL"),
 ]
 

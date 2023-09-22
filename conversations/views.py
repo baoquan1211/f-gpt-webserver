@@ -24,11 +24,7 @@ class ConversationView(viewsets.ViewSet):
             )
 
             conversations = conversation_serializer.data
-            print(conversations)
-            if conversations:
-                return response.Response(conversations, status=status.HTTP_200_OK)
-            else:
-                return response.Response([], status=status.HTTP_204_NO_CONTENT)
+            return response.Response(conversations, status=status.HTTP_200_OK)
         except Exception as error:
             print(error)
             return response.Response(
