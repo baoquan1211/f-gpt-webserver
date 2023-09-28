@@ -5,7 +5,7 @@ from django.conf import settings
 from users.models import User, Department, Role, FileUpload
 
 
-class CustomObtainPairSerializer(TokenObtainPairSerializer):
+class ObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)

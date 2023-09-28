@@ -15,7 +15,7 @@ class ConversationView(viewsets.ViewSet):
     def list(self, request):
         if request is None:
             return response.Response(
-                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+                "Respose is not valid", status=status.HTTP_400_BAD_REQUEST
             )
         try:
             conversation_serializer = ConversationSerializer(
@@ -34,7 +34,7 @@ class ConversationView(viewsets.ViewSet):
     def list_for_admin(self, request):
         if request is None:
             return response.Response(
-                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+                "Respose is not valid", status=status.HTTP_400_BAD_REQUEST
             )
         try:
             if request._user.is_staff:
@@ -58,7 +58,7 @@ class ConversationView(viewsets.ViewSet):
     def get(self, request, id):
         if request is None:
             return response.Response(
-                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+                "Respose is not valid", status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -78,7 +78,7 @@ class ConversationView(viewsets.ViewSet):
     def get_for_admin(self, request, id):
         if request is None:
             return response.Response(
-                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+                "Respose is not valid", status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -102,7 +102,7 @@ class ConversationView(viewsets.ViewSet):
     def patch(self, request, id):
         if request is None:
             return response.Response(
-                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+                "Respose is not valid", status=status.HTTP_400_BAD_REQUEST
             )
         new_name = request.GET.get("name", "")
         if new_name == "":
@@ -130,7 +130,7 @@ class ConversationView(viewsets.ViewSet):
     def delete(self, request, id):
         if request is None:
             return response.Response(
-                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+                "Respose is not valid", status=status.HTTP_400_BAD_REQUEST
             )
 
         conversation = Conversation.objects.get(id=id)

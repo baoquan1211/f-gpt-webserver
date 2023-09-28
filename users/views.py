@@ -26,7 +26,7 @@ from users.serializers import (
 from users.paginations import CustomNumberPagination
 
 
-class CustomTokenObtainPairView(TokenObtainPairView):
+class TokenObtainPairView(TokenObtainPairView):
     serializer_class = TokenObtainPairSerializer
 
 

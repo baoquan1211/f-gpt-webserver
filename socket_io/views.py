@@ -3,9 +3,8 @@ import socketio
 from conversations.models import Conversation
 from users.models import User
 import json
-from .message_filter import message_filter
+from words_filter.views import message_filter
 from ai_platforms.views import OpenAI, PaLM
-import codecs
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
@@ -22,7 +21,7 @@ app = socketio.ASGIApp(sio)
 async def ask_request(sid, data):
     try:
         user_message = data.get("message")
-        user_message['content'] = user_message['content'].decode('utf-8')
+        user_message["content"] = user_message["content"].decode("utf-8")
         messages = []
 
         if data.get("user") is None:
@@ -32,7 +31,7 @@ async def ask_request(sid, data):
 
         if data.get("conversation") is None:
             conversation = Conversation(
-                name=user_message['content'],
+                name=user_message["content"],
                 user_id=user,
                 messages=json.dumps(messages),
             )
@@ -40,9 +39,9 @@ async def ask_request(sid, data):
         else:
             conversation = Conversation.objects.get(id=data.get("conversation"))
             messages = json.loads(conversation.messages)
-        blocked_words = await message_filter(user_message['content'])
+        blocked = await message_filter(user_message["content"], conversation)
 
-        if len(blocked_words) > 0:
+        if blocked:
             response = {
                 "role": "server",
                 "content": "Your message was blocked as It contains some blocked words. Please try again.",
@@ -50,7 +49,6 @@ async def ask_request(sid, data):
             }
         else:
             ai_platform = data.get("ai_platform", "openai")
-            messages.append(user_message)
             if ai_platform == "openai":
                 ai_platform = OpenAI()
                 response = await ai_platform.get_answer(messages)
@@ -63,7 +61,7 @@ async def ask_request(sid, data):
             "conversation": conversation.id,
             "response": response,
         }
-
+        messages.append(user_message)
         messages.append(response)
         conversation.messages = json.dumps(messages)
         conversation.save()

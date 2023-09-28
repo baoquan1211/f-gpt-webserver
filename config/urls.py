@@ -19,6 +19,7 @@ from django.urls import path, include
 from conversations.urls import urlpattern as conversation_urls
 from users.urls import urlpatterns as user_urls
 from policies.urls import urlpatterns as policy_urls
+from words_filter.urls import urlpatterns as blocked_messages_urls
 from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
 from users.views import TokenObtainPairView
 
@@ -26,6 +27,7 @@ urlpatterns = [
     path("admin", admin.site.urls),
     path("api/v1/conversations", include(conversation_urls)),
     path("api/v1/policies", include(policy_urls)),
+    path("api/v1/blocked-messages", include(blocked_messages_urls)),
     path("api/v1/", include(user_urls)),
     path("api/login", TokenObtainPairView.as_view(), name="login"),
     path("api/refresh", TokenRefreshView.as_view(), name="refresh"),
