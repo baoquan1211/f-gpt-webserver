@@ -229,8 +229,8 @@ class FileUploadView(viewsets.ViewSet):
 
 class UserView(viewsets.ViewSet, BaseUserManager):
     permission_classes = [permissions.IsAuthenticated, UserCustomPermission]
-    # serializer_class = UserSerializer
-    # queryset = User.objects.all()
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
 
     def list(self, request):
         if request is None:
@@ -449,8 +449,8 @@ class UserView(viewsets.ViewSet, BaseUserManager):
 
 class DepartmentView(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    # queryset = Department.objects.all()
-    # serializer_class = DepartmentSerializer
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
 
     def list(self, request):
         if request is None:
@@ -551,8 +551,8 @@ class DepartmentView(viewsets.ViewSet):
 
 class RoleView(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    # queryset = Role.objects.all()
-    # serializer_class = RoleSerializer
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
 
     def list(self, request):
         if request is None:
