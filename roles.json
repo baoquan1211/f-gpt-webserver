@@ -1,0 +1,50 @@
+[
+  {
+    "fields": {
+      "name": "Staff"
+    },
+    "model": "users.role"
+  },
+  {
+    "fields": {
+      "name": "Supervisor"
+    },
+    "model": "users.role"
+  },
+  {
+    "fields": {
+      "name": "Manager"
+    },
+    "model": "users.role"
+  },
+  {
+    "fields": {
+      "name": "Leader"
+    },
+    "model": "users.role"
+  },
+  {
+    "fields": {
+      "name": "Director"
+    },
+    "model": "users.role"
+  },
+  {
+    "fields": {
+      "name": "Admin"
+    },
+    "model": "users.role"
+  },
+  {
+    "fields": {
+      "name": "R&D Center"
+    },
+    "model": "users.department"
+  },
+  {
+    "fields": {
+      "name": "H&S Department"
+    },
+    "model": "users.department"
+  }
+]

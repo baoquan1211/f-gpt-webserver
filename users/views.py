@@ -1,7 +1,7 @@
 from rest_framework import status
 from datetime import datetime
+from django.utils import timezone
 from rest_framework import viewsets
-from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -13,38 +13,20 @@ import pandas as pd
 import io
 from unidecode import unidecode
 from django.db.models import Count
-from users.models import User, Department, Role
+
+from .models import User, Department, Role
 from users.serializers import (
     UserSerializer,
     DepartmentSerializer,
     RoleSerializer,
     TokenObtainPairSerializer,
-    FileSerializer,
 )
 
-
-class UserCustomPermission(permissions.BasePermission):
-    """
-    User only read (better only read information myself).
-
-    Admin can read, edit all information user
-    """
-
-    message = "User only read (better only read information myself). Admin can read, edit all information user"
-
-    def has_object_permission(self, request, view, obj):
-        if request.user.is_staff or request.user.is_superuser:
-            return True
-        else:
-            if request.methods in permissions.SAFE_METHODS:
-                # Read only information yourself
-                return obj.id == request.user
-            else:
-                # Write only information yourself
-                return obj.id == request.user
+# from .permissions import UserCustomPermission, Department_Role_CustomPermission
+from users.paginations import CustomNumberPagination
 
 
-class TokenObtainPairView(TokenObtainPairView):
+class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = TokenObtainPairSerializer
 
 
@@ -75,64 +57,95 @@ def handle_dataframe(request, dataframe):
         )
 
     dataframe["name_format"] = dataframe["name"].str.lower().apply(unidecode)
-    # Make username and user list
-    user_data_list = []
+    dataframe["username"] = ""
 
+    # Make column username
     for index, row in dataframe.iterrows():
         name_element = row["name_format"].split(" ")
-        # print(name_element)
         str_username = name_element[-1] + "-"
 
         for i in range(len(name_element) - 1):
             str_username += name_element[i][0]
-        # print(str_username)
 
-        # Count username in your database
-        count_username = User.objects.filter(username=str_username).aggregate(
+        dataframe.at[index, "username"] = str_username
+    # print(dataframe)
+
+    # Group by and count username
+    df_username = dataframe.groupby("username").size().reset_index(name="count")
+    # print(df_username)
+
+    # Count username exists in database
+    for index, row in df_username.iterrows():
+        count_username = User.objects.filter(username=row["username"]).aggregate(
             count=Count("username")
         )["count"]
-        # print(count_username)
+        df_username.at[index, "count_db"] = int(count_username)
 
-        if count_username > 0:
-            str_username += str(count_username + 1)
-        # print(str_username)
+    # print(df_username)
 
-        # Create a dictionary for the current user
-        user_data = {
-            "username": str_username,
-            "name": row["name"],
-            "email": row["email"],
-            "password": "fujinet_system",
-            "role_id": Role.objects.get(name=row["role"]).id,
-            "department_id": Department.objects.get(name=row["department"]).id,
-            "update_by": request.user.id,
-        }
+    # Handle username must be unique
+    for index_df, row_df in dataframe.iterrows():
+        for index_user, row_user in df_username.iterrows():
+            if row_df["username"] == row_user["username"]:
+                if int(row_user["count_db"]) == 0:
+                    # for i in range(int(row_user['count'])):
+                    # if i == 0:
+                    # break
+                    # else:
+                    # dataframe.at[index_df, 'username'] = row_df['username'] + str(i+1)
+                    # break
+                    dataframe.at[index_df, "username"] = row_df["username"]
 
-        # # Append the user data dictionary to the list
+                else:
+                    # for i in range(int(row_user['count'])):
+                    # dataframe.at[index_df, 'username'] = row_df['username'] + str(i + (int(row_user['count_db']) + 1))
+                    dataframe.at[index_df, "username"] = row_df["username"] + str(
+                        int(row_user["count_db"]) + 1
+                    )
+
+                # Update df_username
+                df_username.at[index_user, "count"] = int(row_user["count"]) - 1
+                df_username.at[index_user, "count_db"] = int(row_user["count_db"]) + 1
+
+    # print(df_username)
+    # print(dataframe)
+
+    # Make list instance User
+    user_data_list = []
+    for index, row in dataframe.iterrows():
+        # Create instance User
+        user_data = User(
+            username=row["username"],
+            name=row["name"],
+            email=row["email"],
+            role_id=Role.objects.get(name=row["role"]),
+            department_id=Department.objects.get(name=row["department"]),
+            update_by=request.user,
+        )
+        # Hash password
+        user_data.set_password("fujinet_system")
+
+        # Append the instance User to the list
         user_data_list.append(user_data)
-
     return user_data_list
 
 
-class FileUploadView(viewsets.ViewSet):
+class FileUploadView(viewsets.ModelViewSet):
     """Represents file upload view class.
 
-    API endpoint that allows users to be upload a csv file.
+    API endpoint that allows users to upload a csv file.
 
     POST: upload file
     """
 
-    permission_classes = [permissions.IsAuthenticated, UserCustomPermission]
+    permission_classes = [permissions.IsAdminUser]
     parser_classes = [MultiPartParser, FormParser]
-    # serializer_class = FileSerializer
+    serializer_class = UserSerializer
 
-    def post(self, request, format=None):
+    def create(self, request, format=None):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
-            request.data["owner"] = request.user.id
-            file_serializer = FileSerializer(data=request.data)
-
             # Check file is csv or xlsx
             _dict_file_obj = request.data["file"].__dict__
             # print(_dict_file_obj)
@@ -147,102 +160,113 @@ class FileUploadView(viewsets.ViewSet):
             # Get file
             file_obj = request.FILES["file"]
 
-            if file_serializer.is_valid():
-                owner_id = request.user.id
-                file_serializer.validated_data["owner"] = owner_id
+            # Read file by pandas
+            if _csv is True:
+                # Read csv file InMemoryUploadedFile
+                data = file_obj.read().decode("UTF-8")
+                # print(data)
 
-                # Read file by pandas
-                if _csv is True:
-                    # Read csv file InMemoryUploadedFile
-                    data = file_obj.read().decode("UTF-8")
-                    io_string = io.StringIO(data)
+                io_string = io.StringIO(data)
+                user_df = pd.read_csv(io_string)
+                # print(user_df)
 
-                    user_df = pd.read_csv(io_string)
-                    # print(user_df)
+                user_data_list = handle_dataframe(request, user_df)
+                # print(user_data_list)
 
-                    user_data_list = handle_dataframe(request, user_df)
+                if len(user_data_list) == 0:
+                    return Response("File is empty", status=status.HTTP_400_BAD_REQUEST)
 
-                    if len(user_data_list) == 0:
-                        return Response(
-                            "File is empty", status=status.HTTP_400_BAD_REQUEST
-                        )
+                # Create list instance User in one transaction
+                User.objects.bulk_create(user_data_list)
 
-                    # Serializer user
-                    users_serializer = UserSerializer(data=user_data_list, many=True)
+                return Response("Upload successful", status=status.HTTP_201_CREATED)
+            elif _excel is True:
+                # Read xlsx file InMemoryUploadedFile
+                user_df = pd.read_excel(file_obj)
+                # print(user_df)
 
-                    if users_serializer.is_valid():
-                        file_serializer.save()
-                        users = users_serializer.save()
+                user_data_list = handle_dataframe(request, user_df)
+                # print(user_data_list)
 
-                        if users:
-                            return Response(
-                                {
-                                    "message": "Upload successful",
-                                    "data": file_serializer.data,
-                                },
-                                status=status.HTTP_201_CREATED,
-                            )
-                    return Response(
-                        users_serializer.errors, status=status.HTTP_400_BAD_REQUEST
-                    )
+                if len(user_data_list) == 0:
+                    return Response("File is empty", status=status.HTTP_400_BAD_REQUEST)
 
-                elif _excel is True:
-                    # Read xlsx file InMemoryUploadedFile
-                    user_df = pd.read_excel(file_obj)
-                    # print(user_df)
+                # Create list instance User in one transaction
+                User.objects.bulk_create(user_data_list)
 
-                    user_data_list = handle_dataframe(request, user_df)
-
-                    if len(user_data_list) == 0:
-                        return Response(
-                            "File is empty", status=status.HTTP_400_BAD_REQUEST
-                        )
-
-                    # Serializer user
-                    users_serializer = UserSerializer(data=user_data_list, many=True)
-
-                    if users_serializer.is_valid():
-                        users = users_serializer.save()
-                        file_serializer.save()
-                        if users:
-                            return Response(
-                                {
-                                    "message": "Upload successful",
-                                    "data": file_serializer.data,
-                                },
-                                status=status.HTTP_201_CREATED,
-                            )
-                    return Response(
-                        users_serializer.errors, status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                else:
-                    return Response(
-                        "Must be *.xlsx or *.csv File.",
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-            return Response("Upload successful", status=status.HTTP_201_CREATED)
+                return Response("Upload successful", status=status.HTTP_201_CREATED)
+            else:
+                return Response(
+                    "Must be *.xlsx or *.csv File.", status=status.HTTP_400_BAD_REQUEST
+                )
+            # return Response("Upload successful", status=status.HTTP_201_CREATED)
         except Exception as ex:
             print(ex)
             return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserView(viewsets.ViewSet, BaseUserManager):
-    permission_classes = [permissions.IsAuthenticated, UserCustomPermission]
+class UserView(viewsets.ModelViewSet, BaseUserManager):
+    # permission_classes = [UserCustomPermission]
     serializer_class = UserSerializer
-    queryset = User.objects.all()
+    pagination_class = CustomNumberPagination
+
+    def get_queryset(self):
+        queryset = User.objects.select_related("department_id", "role_id").filter(
+            delete_at=None
+        )
+        return queryset
 
     def list(self, request):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
-            data = User.objects.select_related("department_id", "role_id").filter(
-                delete_at=None
-            )
+            # data = self.paginate_queryset(self.get_queryset())
+            # user_serializer = UserSerializer(data, many=True)
+            # users = user_serializer.data
+            #
+            # for i in range(len(users)):
+            #     del users[i]['password']
+            #
+            #     if data[i].department_id is not None and data[i].role_id is not None and data[i].update_by is not None:
+            #         users[i]['department_id'] = data[i].department_id.name
+            #         users[i]['role_id'] = data[i].role_id.name
+            #         users[i]['update_by'] = data[i].update_by.name
+            #
+            # # The pagination is handled automatically by CustomNumberPagination
+            # return self.paginator.get_paginated_response(users)
 
-            # print(data[0])
-            # print(type(data[0].department_id))
-            # print((data[0].department_id).name)
+            role = self.request.query_params.get("role", None)
+            department = self.request.query_params.get("department", None)
+            username = self.request.query_params.get("username", None)
+
+            if role and department and username:
+                queryset = self.get_queryset().filter(
+                    role_id=role,
+                    department_id=department,
+                    username__startswith=username,
+                )
+            elif role and department:
+                queryset = self.get_queryset().filter(
+                    role_id=role, department_id=department
+                )
+            elif role and username:
+                queryset = self.get_queryset().filter(
+                    role_id=role, username__startswith=username
+                )
+            elif department and username:
+                queryset = self.get_queryset().filter(
+                    department_id=department, username__startswith=username
+                )
+            elif role:
+                queryset = self.get_queryset().filter(role_id=role)
+            elif department:
+                queryset = self.get_queryset().filter(department_id=department)
+            elif username:
+                queryset = self.get_queryset().filter(username__startswith=username)
+            else:
+                queryset = self.get_queryset()
+
+            data = self.paginate_queryset(queryset)
 
             user_serializer = UserSerializer(data, many=True)
             users = user_serializer.data
@@ -259,27 +283,23 @@ class UserView(viewsets.ViewSet, BaseUserManager):
                     users[i]["role_id"] = data[i].role_id.name
                     users[i]["update_by"] = data[i].update_by.name
 
-            if users:
-                return Response(users, status=status.HTTP_200_OK)
-            else:
-                return Response("Users is not found", status=status.HTTP_404_NOT_FOUND)
+            # The pagination is handled automatically by CustomNumberPagination
+            return self.paginator.get_paginated_response(users)
+
         except Exception as ex:
+            print(ex)
             return Response(str(ex), status=status.HTTP_404_NOT_FOUND)
 
     def retrieve(self, request, id=None):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
-            data = User.objects.select_related("department_id", "role_id").get(
-                id=id, delete_at=None
-            )
-            # print(type(data.department_id))
+            data = self.get_queryset().get(id=id)
 
             user_serializer = UserSerializer(data)
             user = user_serializer.data
-            # print(user)
-            del user["password"]
 
+            del user["password"]
             if (
                 data.department_id is not None
                 and data.role_id is not None
@@ -288,9 +308,6 @@ class UserView(viewsets.ViewSet, BaseUserManager):
                 user["department_id"] = data.department_id.name
                 user["role_id"] = data.role_id.name
                 user["update_by"] = data.update_by.name
-            # print(user)
-            # user['department_id'] = Department.objects.get(id=user['department_id']).name
-            # user['role_id'] = Role.objects.get(id=user['role_id']).name
 
             return Response(user, status=status.HTTP_200_OK)
         except Exception as ex:
@@ -300,10 +317,12 @@ class UserView(viewsets.ViewSet, BaseUserManager):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
-            user_serializer = UserSerializer(data=request.data)
+            data = request.data
+            user_serializer = UserSerializer(data=data)
 
             if user_serializer.is_valid():
                 user = user_serializer.save()
+
                 if user:
                     return Response(status=status.HTTP_201_CREATED)
             return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -314,10 +333,12 @@ class UserView(viewsets.ViewSet, BaseUserManager):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
+            user_request = self.request.user
             user = User.objects.get(id=id)
+            if user is None:
+                return Response("User is not valid", status=status.HTTP_404_NOT_FOUND)
             # Name
             new_name = request.data.get("name", "")
-            print(new_name)
             if new_name != "":
                 user.name = new_name
             # Role
@@ -337,6 +358,9 @@ class UserView(viewsets.ViewSet, BaseUserManager):
             if new_password != "":
                 user.set_password(new_password)
 
+            # User update
+            user.update_by = user_request
+
             user_serializer = UserSerializer(user, data=model_to_dict(user))
 
             if user_serializer.is_valid():
@@ -351,13 +375,16 @@ class UserView(viewsets.ViewSet, BaseUserManager):
         if request is None:
             return Response("Request is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
+            user_request = self.request.user
             user = User.objects.get(id=id)
+
             if user is None:
                 return Response("User is not valid", status=status.HTTP_404_NOT_FOUND)
-            user.delete_at = datetime.now()
+            user.delete_at = timezone.now()
+            user.update_by = user_request
+
             user.save()
             return Response("Delete user success", status=status.HTTP_200_OK)
-            # return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as ex:
             return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
 
@@ -368,12 +395,46 @@ class UserView(viewsets.ViewSet, BaseUserManager):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
-            # Use square brackets to access query parameters
+            # Get query params
+            role = self.request.query_params.get("role", None)
+            department = self.request.query_params.get("department", None)
             username = self.request.query_params.get("username", None)
-            # print(username)
 
-            data = User.objects.filter(username__startswith=username)
-            # print(data)
+            print(role)
+            print(department)
+            print(username)
+
+            if role and department and username:
+                data = User.objects.filter(
+                    role_id=role,
+                    department_id=department,
+                    username__startswith=username,
+                    delete_at=None,
+                )
+            elif role and department:
+                data = User.objects.filter(
+                    role_id=role, department_id=department, delete_at=None
+                )
+            elif role and username:
+                data = User.objects.filter(
+                    role_id=role, username__startswith=username, delete_at=None
+                )
+            elif department and username:
+                data = User.objects.filter(
+                    department_id=department,
+                    username__startswith=username,
+                    delete_at=None,
+                )
+            elif role:
+                data = User.objects.filter(role_id=role, delete_at=None)
+            elif department:
+                data = User.objects.filter(department_id=department, delete_at=None)
+            elif username:
+                data = User.objects.filter(
+                    username__startswith=username, delete_at=None
+                )
+            else:
+                data = User.objects.all(delete_at=None)
 
             user_serializer = UserSerializer(data, many=True)
 
@@ -391,64 +452,75 @@ class UserView(viewsets.ViewSet, BaseUserManager):
                     users[i]["role_id"] = data[i].role_id.name
                     users[i]["update_by"] = data[i].update_by.name
 
-            if users:
-                return Response(users, status=status.HTTP_200_OK)
+            return Response(users, status=status.HTTP_200_OK)
+        except Exception as ex:
+            return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
+
+    def filter(self, request):
+        """
+        Filter user by role_id and department_id
+        """
+        if request is None:
+            return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
+        try:
+            role = self.request.query_params.get("role", None)
+            department = self.request.query_params.get("department", None)
+            username = self.request.query_params.get("username", None)
+
+            if role and department and username:
+                data = User.objects.filter(
+                    role_id=role,
+                    department_id=department,
+                    username__startswith=username,
+                    delete_at=None,
+                )
+            elif role and department:
+                data = User.objects.filter(
+                    role_id=role, department_id=department, delete_at=None
+                )
+            elif role and username:
+                data = User.objects.filter(
+                    role_id=role, username__startswith=username, delete_at=None
+                )
+            elif department and username:
+                data = User.objects.filter(
+                    department_id=department,
+                    username__startswith=username,
+                    delete_at=None,
+                )
+            elif role:
+                data = User.objects.filter(role_id=role, delete_at=None)
+            elif department:
+                data = User.objects.filter(department_id=department, delete_at=None)
+            elif username:
+                data = User.objects.filter(
+                    username__startswith=username, delete_at=None
+                )
             else:
-                return Response("Users is not found", status=status.HTTP_404_NOT_FOUND)
+                data = User.objects.all(delete_at=None)
+
+            user_serializer = UserSerializer(data, many=True)
+            users = user_serializer.data
+
+            for i in range(len(users)):
+                del users[i]["password"]
+
+                if (
+                    data[i].department_id is not None
+                    and data[i].role_id is not None
+                    and data[i].update_by is not None
+                ):
+                    users[i]["department_id"] = data[i].department_id.name
+                    users[i]["role_id"] = data[i].role_id.name
+                    users[i]["update_by"] = data[i].update_by.name
+
+            return Response(users, status=status.HTTP_200_OK)
         except Exception as ex:
             return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
 
 
-# Hướng filter backend không ổn
-# class SearchUser(viewsets.ModelViewSet):
-#     serializer_class = UserSerializer
-#     permission_classes = [permissions.IsAdminUser]
-#
-#     # Search filter backend
-#     # '^' Starts-with search
-#     filter_backends = [filters.SearchFilter]
-#     search_fields = ["^username"]
-#
-#     def get_queryset(self):
-#         queryset = User.objects.select_related('department_id', 'role_id').filter(delete_at=None)
-#         return queryset
-#
-#     def search(self, request):
-#         if request is None:
-#             return Response(
-#                 "Response is not valid", status=status.HTTP_400_BAD_REQUEST
-#             )
-#         try:
-#             data = self.filter_queryset(self.get_queryset())
-#             print(data)
-#
-#             user_serializer = UserSerializer(
-#                 data, many=True
-#             )
-#
-#             users = user_serializer.data
-#
-#             for i in range(len(users)):
-#                 del users[i]['password']
-#
-#                 if data[i].department_id is not None and data[i].role_id is not None and data[i].update_by is not None:
-#                     users[i]['department_id'] = data[i].department_id.name
-#                     users[i]['role_id'] = data[i].role_id.name
-#                     users[i]['update_by'] = data[i].update_by.name
-#
-#             if users:
-#                 return Response(users, status=status.HTTP_200_OK)
-#             else:
-#                 return Response('Users is not found', status=status.HTTP_404_NOT_FOUND)
-#         except Exception as ex:
-#             print(ex)
-#             return Response(
-#                 str(ex), status=status.HTTP_400_BAD_REQUEST
-#             )
-
-
-class DepartmentView(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+class DepartmentView(viewsets.ModelViewSet):
+    # permission_classes = [Department_Role_CustomPermission]
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
 
@@ -497,7 +569,7 @@ class DepartmentView(viewsets.ViewSet):
         except Exception as ex:
             return Response(str(ex), status=status.HTTP_404_NOT_FOUND)
 
-    def update(self, request, id=None):
+    def patch(self, request, id=None):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -512,12 +584,6 @@ class DepartmentView(viewsets.ViewSet):
                     "New name department is empty", status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Carefully
-            # .save() will create a new instance.
-            # serializer = CommentSerializer(data=data)
-
-            # .save() will update the existing `comment` instance.
-            # serializer = CommentSerializer(comment, data=data)
             department.name = new_name
             department_serializer = DepartmentSerializer(
                 department, data=model_to_dict(department)
@@ -532,7 +598,7 @@ class DepartmentView(viewsets.ViewSet):
         except Exception as ex:
             return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, id=None):
+    def delete(self, request, id=None):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -549,8 +615,9 @@ class DepartmentView(viewsets.ViewSet):
             return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
 
 
-class RoleView(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+class RoleView(viewsets.ModelViewSet):
+    # permission_classes = [Department_Role_CustomPermission]
+    # permission_classes = [permissions.IsAdminUser]
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
 
@@ -595,7 +662,7 @@ class RoleView(viewsets.ViewSet):
         except Exception as ex:
             return Response(str(ex), status=status.HTTP_404_NOT_FOUND)
 
-    def update(self, request, id=None):
+    def patch(self, request, id=None):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -620,7 +687,7 @@ class RoleView(viewsets.ViewSet):
         except Exception as ex:
             return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, id=None):
+    def delete(self, request, id=None):
         if request is None:
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
