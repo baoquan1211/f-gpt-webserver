@@ -5,38 +5,38 @@ from .views import UserView, DepartmentView, RoleView, FileUploadView
 urlpatterns = [
     # User
     path(
-        "user",
+        "users",
         UserView.as_view(
             {"get": "list", "post": "create"},
         ),
     ),
     path(
-        "user/<int:id>",
+        "users/<int:id>",
         UserView.as_view(
             {"patch": "patch", "delete": "delete", "get": "retrieve"},
         ),
     ),
-    path("user/search", UserView.as_view({"get": "search"}), name="search-user"),
+    path("users/search", UserView.as_view({"get": "search"}), name="search-user"),
     # Upload file user
     path(
-        "user/upload-file",
+        "users/upload-file",
         FileUploadView.as_view({"post": "post"}),
     ),
     # Department
     path(
-        "department",
+        "departments",
         DepartmentView.as_view({"get": "list", "post": "create"}),
     ),
     path(
-        "department/<int:id>",
+        "departments/<int:id>",
         DepartmentView.as_view(
             {"get": "retrieve", "patch": "update", "delete": "destroy"}
         ),
     ),
     # Role
-    path("role", RoleView.as_view({"get": "list", "post": "create"})),
+    path("roles", RoleView.as_view({"get": "list", "post": "create"})),
     path(
-        "role/<int:id>",
+        "roles/<int:id>",
         RoleView.as_view({"get": "retrieve", "patch": "update", "delete": "destroy"}),
     ),
 ]

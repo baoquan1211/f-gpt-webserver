@@ -113,13 +113,10 @@ ASGI_APPLICATION = "config.asgi.application"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     os.getenv("WEBAPP_URL"),
-    "https://f-gpt-webapp.vercel.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://f-gpt-webserver.onrender.com",
     "http://localhost:5173",
-    "https://f-gpt-webapp.vercel.app",
     os.getenv("WEBAPP_URL"),
 ]
 

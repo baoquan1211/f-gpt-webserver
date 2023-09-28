@@ -9,6 +9,7 @@ from django.contrib.auth.models import (
 from django.conf import settings
 
 
+
 class Department(models.Model):
     name = models.CharField(max_length=100)
 

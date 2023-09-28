@@ -28,7 +28,31 @@ class ConversationView(viewsets.ViewSet):
         except Exception as error:
             print(error)
             return response.Response(
-                "Something went wrong", status=status.HTTP_404_NOT_FOUND
+                "Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def list_for_admin(self, request):
+        if request is None:
+            return response.Response(
+                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+            )
+        try:
+            if request._user.is_staff:
+                conversation_serializer = ConversationSerializer(
+                    Conversation.objects.filter(),
+                    many=True,
+                )
+                conversations = conversation_serializer.data
+                return response.Response(conversations, status=status.HTTP_200_OK)
+            else:
+                return response.Response(
+                    "Just admin can access this link.",
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        except Exception as error:
+            print(error)
+            return response.Response(
+                "Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     def get(self, request, id):
@@ -47,7 +71,32 @@ class ConversationView(viewsets.ViewSet):
             return response.Response(conversation, status=status.HTTP_200_OK)
         except:
             return response.Response(
-                "Conversation is not found", status=status.HTTP_404_NOT_FOUND
+                "Conversation is not found",
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def get_for_admin(self, request, id):
+        if request is None:
+            return response.Response(
+                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            if request._user.is_staff:
+                conversation_serializer = ConversationSerializer(
+                    Conversation.objects.get(id=id)
+                )
+                conversation = conversation_serializer.data
+                return response.Response(conversation, status=status.HTTP_200_OK)
+            else:
+                return response.Response(
+                    "Just admin can access this link.",
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        except:
+            return response.Response(
+                "Conversation is not found",
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     def patch(self, request, id):

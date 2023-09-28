@@ -5,6 +5,7 @@ from users.models import User
 import json
 from .message_filter import message_filter
 from ai_platforms.views import OpenAI, PaLM
+import codecs
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
@@ -19,18 +20,19 @@ app = socketio.ASGIApp(sio)
 
 @sio.event
 async def ask_request(sid, data):
-    print(data.get("user", "undefined"), ": ", data["message"]["content"])
-    messages = []
-
-    if data.get("user") is None:
-        await sio.emit("answer_request", "User not found")
-        return
-    user = User.objects.get(username=data["user"])
-
     try:
+        user_message = data.get("message")
+        user_message['content'] = user_message['content'].decode('utf-8')
+        messages = []
+
+        if data.get("user") is None:
+            await sio.emit("answer_request", "User not found")
+            return
+        user = User.objects.get(username=data["user"])
+
         if data.get("conversation") is None:
             conversation = Conversation(
-                name=data["message"]["content"],
+                name=user_message['content'],
                 user_id=user,
                 messages=json.dumps(messages),
             )
@@ -38,7 +40,7 @@ async def ask_request(sid, data):
         else:
             conversation = Conversation.objects.get(id=data.get("conversation"))
             messages = json.loads(conversation.messages)
-        blocked_words = await message_filter(data["message"]["content"])
+        blocked_words = await message_filter(user_message['content'])
 
         if len(blocked_words) > 0:
             response = {
@@ -48,7 +50,7 @@ async def ask_request(sid, data):
             }
         else:
             ai_platform = data.get("ai_platform", "openai")
-            messages.append(data["message"])
+            messages.append(user_message)
             if ai_platform == "openai":
                 ai_platform = OpenAI()
                 response = await ai_platform.get_answer(messages)
@@ -69,7 +71,7 @@ async def ask_request(sid, data):
         await sio.emit("answer_request", package)
         print("server" ": replied successfully")
     except Exception as e:
-        print("error", e)
+        print(e)
         await sio.emit(
             "answer_request",
             {"error": "Something went wrong", "conversation": data.get("conversation")},

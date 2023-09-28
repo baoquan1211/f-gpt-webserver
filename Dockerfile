@@ -16,4 +16,4 @@ RUN python manage.py collectstatic --noinput
 
 CMD [ "daphne" , "config.asgi:application" , "-b", "0.0.0.0"]
 
-EXPOSE 8000
+EXPOSE 80
