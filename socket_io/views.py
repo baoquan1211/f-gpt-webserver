@@ -39,8 +39,8 @@ async def ask_request(sid, data):
         else:
             conversation = Conversation.objects.get(id=data.get("conversation"))
             messages = json.loads(conversation.messages)
-
         blocked = await message_filter(user_message["content"], conversation)
+
         messages.append(user_message)
 
         if blocked:
@@ -65,6 +65,7 @@ async def ask_request(sid, data):
             "response": response,
         }
 
+        messages.append(response)
         conversation.messages = json.dumps(messages)
         conversation.save()
 
