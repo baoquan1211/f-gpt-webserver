@@ -51,7 +51,6 @@ async def ask_request(sid, data):
             }
         else:
             ai_platform = data.get("ai_platform", "openai")
-            messages.append(user_message)
             if ai_platform == "openai":
                 ai_platform = OpenAI()
                 response = await ai_platform.get_answer(messages)
@@ -60,14 +59,14 @@ async def ask_request(sid, data):
                 ai_platform = PaLM()
                 response = await ai_platform.get_answer(messages)
 
+        messages.append(response)
+        conversation.messages = json.dumps(messages)
+        conversation.save()
+
         package = {
             "conversation": conversation.id,
             "response": response,
         }
-
-        messages.append(response)
-        conversation.messages = json.dumps(messages)
-        conversation.save()
 
         await sio.emit("answer_request", package)
         print("server" ": replied successfully")
