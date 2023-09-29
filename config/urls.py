@@ -20,7 +20,11 @@ from conversations.urls import urlpattern as conversation_urls
 from users.urls import urlpatterns as user_urls
 from policies.urls import urlpatterns as policy_urls
 from words_filter.urls import urlpatterns as blocked_messages_urls
-from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
+from rest_framework_simplejwt.views import (
+    TokenBlacklistView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
 from users.views import TokenObtainPairView
 
 urlpatterns = [
@@ -32,4 +36,5 @@ urlpatterns = [
     path("api/login", TokenObtainPairView.as_view(), name="login"),
     path("api/refresh", TokenRefreshView.as_view(), name="refresh"),
     path("api/logout", TokenBlacklistView.as_view(), name="logout"),
+    path("api/verify", TokenVerifyView.as_view(), name="verify"),
 ]

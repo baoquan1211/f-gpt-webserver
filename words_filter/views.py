@@ -1,9 +1,8 @@
 from rest_framework import response, status, viewsets
 from rest_framework.permissions import IsAdminUser
-from words_filter.serializers import BlockedMessageSerializer
-from words_filter.serializers import BlockedMessage
-
-# Create your views here.
+from words_filter.serializers import BlockedMessageSerializer, BlockedMessage
+from words_filter.models import WordsFilter
+import json
 
 
 class BlockedMessageView(viewsets.ViewSet):
@@ -46,11 +45,6 @@ class BlockedMessageView(viewsets.ViewSet):
             return response.Response(
                 "Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-from words_filter.models import WordsFilter
-import json
-from words_filter.serializers import BlockedMessageSerializer
 
 
 async def message_filter(message, conversation):

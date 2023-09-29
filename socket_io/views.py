@@ -39,7 +39,9 @@ async def ask_request(sid, data):
         else:
             conversation = Conversation.objects.get(id=data.get("conversation"))
             messages = json.loads(conversation.messages)
+
         blocked = await message_filter(user_message["content"], conversation)
+        messages.append(user_message)
 
         if blocked:
             response = {
@@ -49,6 +51,7 @@ async def ask_request(sid, data):
             }
         else:
             ai_platform = data.get("ai_platform", "openai")
+            messages.append(user_message)
             if ai_platform == "openai":
                 ai_platform = OpenAI()
                 response = await ai_platform.get_answer(messages)
@@ -61,8 +64,7 @@ async def ask_request(sid, data):
             "conversation": conversation.id,
             "response": response,
         }
-        messages.append(user_message)
-        messages.append(response)
+
         conversation.messages = json.dumps(messages)
         conversation.save()
 
