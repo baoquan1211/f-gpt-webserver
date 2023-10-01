@@ -1,7 +1,10 @@
 from rest_framework import response, status, viewsets
 from rest_framework.permissions import IsAdminUser
-from words_filter.serializers import BlockedMessageSerializer, BlockedMessage
-from words_filter.models import WordsFilter
+from words_filter.serializers import (
+    BlockedMessageSerializer,
+    WordsFilterSerializer,
+)
+from words_filter.models import WordsFilter, BlockedMessage
 import json
 
 
@@ -57,10 +60,9 @@ async def message_filter(message, conversation):
         word = word.replace(".", "")
         list_word_of_message.append(word)
 
-    blocked_words = WordsFilter.objects.get()
+    blocked_words = list(WordsFilter.objects.all().values_list("key_words", flat=True))
     if blocked_words is None:
-        return blocked_words
-    blocked_words = json.loads(blocked_words.key_words)
+        return False
 
     founded_words = []
     for word in blocked_words:
