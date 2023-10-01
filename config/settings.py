@@ -29,7 +29,7 @@ load_dotenv()
 SECRET_KEY = "django-insecure-o1(5&5-537eaf+x1aw-usrt&m%15(*qrjd&$%)gya!8^a2x69d"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".vercel.app", ".now.sh", ".onrender.com"]
 
