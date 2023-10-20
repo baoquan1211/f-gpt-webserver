@@ -64,7 +64,6 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password", None)
         instance = self.Meta.model(**validated_data)
 
-        print(password)
         if password is not None:
             instance.set_password(password)
         instance.save()

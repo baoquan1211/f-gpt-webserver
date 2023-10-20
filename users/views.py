@@ -1,3 +1,4 @@
+from abc import ABCMeta
 from rest_framework import status
 from datetime import datetime
 from django.utils import timezone
@@ -22,8 +23,9 @@ from users.serializers import (
     TokenObtainPairSerializer,
 )
 
-# from .permissions import UserCustomPermission, Department_Role_CustomPermission
+from users.permissions import UserPermission
 from users.paginations import CustomNumberPagination
+from rest_framework import permissions
 
 
 class TokenObtainPairView(TokenObtainPairView):
@@ -106,9 +108,6 @@ def handle_dataframe(request, dataframe):
                 # Update df_username
                 df_username.at[index_user, "count"] = int(row_user["count"]) - 1
                 df_username.at[index_user, "count_db"] = int(row_user["count_db"]) + 1
-
-    # print(df_username)
-    # print(dataframe)
 
     # Make list instance User
     user_data_list = []
@@ -206,7 +205,7 @@ class FileUploadView(viewsets.ModelViewSet):
 
 
 class UserView(viewsets.ModelViewSet, BaseUserManager):
-    # permission_classes = [UserCustomPermission]
+    permission_classes = [UserPermission]
     serializer_class = UserSerializer
     pagination_class = CustomNumberPagination
 
@@ -327,7 +326,7 @@ class UserView(viewsets.ModelViewSet, BaseUserManager):
                     return Response(status=status.HTTP_201_CREATED)
             return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as ex:
-            return Response(str(ex), status=status.HTTP_400_BAD_REQUEST)
+            return Response(str(ex), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def patch(self, request, id=None):
         if request is None:
@@ -399,10 +398,6 @@ class UserView(viewsets.ModelViewSet, BaseUserManager):
             role = self.request.query_params.get("role", None)
             department = self.request.query_params.get("department", None)
             username = self.request.query_params.get("username", None)
-
-            print(role)
-            print(department)
-            print(username)
 
             if role and department and username:
                 data = User.objects.filter(

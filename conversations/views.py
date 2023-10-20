@@ -167,5 +167,5 @@ class ConversationView(viewsets.ViewSet):
         except Exception as error:
             return response.Response(
                 str(error),
-                status=status.HTTP_404_NOT_FOUND,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
