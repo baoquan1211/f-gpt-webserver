@@ -115,11 +115,13 @@ ASGI_APPLICATION = "config.asgi.application"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     os.getenv("WEBAPP_URL"),
+    os.getenv("WEBSERVER_URL"),
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     os.getenv("WEBAPP_URL"),
+    os.getenv("WEBSERVER_URL"),
 ]
 
 
