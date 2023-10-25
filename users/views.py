@@ -317,8 +317,14 @@ class UserView(viewsets.ModelViewSet, BaseUserManager):
             return Response("Response is not valid", status=status.HTTP_400_BAD_REQUEST)
         try:
             data = request.data
-            user_serializer = UserSerializer(data=data)
-
+            new_user = {
+                "username": request.data.get("username", ""),
+                "password": request.data.get("password", ""),
+                "name": request.data.get("name", ""),
+                "email": request.data.get("email", ""),
+                "is_active": True,
+            }
+            user_serializer = UserSerializer(data=new_user)
             if user_serializer.is_valid():
                 user = user_serializer.save()
 

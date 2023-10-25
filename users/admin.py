@@ -10,13 +10,15 @@ from users.models import User, Department, Role
 class UserCreationForm(forms.ModelForm):
     """A form for creating new users. Includes all the required
     fields, plus a repeated password."""
-    password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
-    password2 = forms.CharField(label='Password confirmation', widget=forms.PasswordInput)
+
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password2 = forms.CharField(
+        label="Password confirmation", widget=forms.PasswordInput
+    )
 
     class Meta:
         model = User
-        fields = ('username', 'email')
-
+        fields = ("username", "email")
 
     def clean_password2(self):
         # Check that the two password entries match
@@ -34,23 +36,25 @@ class UserCreationForm(forms.ModelForm):
             user.save()
         return user
 
+
 class UserChangeForm(forms.ModelForm):
     """A form for updating users. Includes all the fields on
     the user, but replaces the password field with admin's
     password hash display field.
     """
+
     password = ReadOnlyPasswordHashField()
 
     class Meta:
         model = User
-        fields = ('username', 'email')
-
+        fields = ("username", "email")
 
     def clean_password(self):
         # Regardless of what the user provides, return the initial value.
         # This is done here, rather than on the field, because the
         # field does not have access to the initial value
         return self.initial["password"]
+
 
 class UserAdmin(BaseUserAdmin):
     # The forms to add and change user instances
@@ -60,23 +64,47 @@ class UserAdmin(BaseUserAdmin):
     # The fields to be used in displaying the User model.
     # These override the definitions on the base UserAdmin
     # that reference specific fields on auth.User.
-    list_display = ['username', 'email', 'name', 'department_id', 'role_id', 'is_active', 'is_staff', 'is_superuser', "delete_at"]
-    list_filter = ('is_superuser',)
+    list_display = [
+        "username",
+        "email",
+        "name",
+        "department_id",
+        "role_id",
+        "is_active",
+        "is_staff",
+        "is_superuser",
+        "delete_at",
+    ]
+    list_filter = ("is_superuser",)
     fieldsets = (
-        (None, {'fields': ('username', 'email', 'password')}),
-        ('Personal info', {'fields': ('name', 'role_id', 'department_id')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'update_by', 'delete_at')}),
+        (None, {"fields": ("username", "email", "password")}),
+        ("Personal info", {"fields": ("name", "role_id", "department_id")}),
+        (
+            "Permissions",
+            {
+                "fields": (
+                    "is_active",
+                    "is_staff",
+                    "is_superuser",
+                    "update_by",
+                    "delete_at",
+                )
+            },
+        ),
     )
     # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
     # overrides get_fieldsets to use this attribute when creating a user.
     add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'username', 'password1', 'password2')}
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": ("email", "username", "password1", "password2"),
+            },
         ),
     )
-    search_fields = ('username',)
-    ordering = ('username',)
+    search_fields = ("username",)
+    ordering = ("username",)
     filter_horizontal = ()
 
 
